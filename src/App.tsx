@@ -1,6 +1,9 @@
+import type { ReactNode } from 'react'
 import React from 'react'
 import { render } from 'react-dom'
-import { } from './App.less'
+import './App.less'
+
+type A = ReactNode
 
 const App = () => {
  return (
@@ -9,6 +12,8 @@ const App = () => {
   </div>
  )
 }
+
+
 
 export default render(<App />, document.getElementById('app'))
 
