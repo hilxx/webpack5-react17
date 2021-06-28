@@ -34,7 +34,5 @@ screenshot
 .eslintcache
 
 # 更新webpack5-react 关闭下面的注解
-# build
-# src
-# public
-# webpack.config.js
+ build
+ webpack.config.js

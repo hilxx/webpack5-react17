@@ -26,10 +26,13 @@
         "./src/*"
       ],
       "@@/*": [
-        "./src/.umi/*"
-      ],
-      "@config/*": [
         "./config/*"
+      ],
+      "@styles": [
+        "./src/assets/styles/*"
+      ],
+      "@imgs": [
+        "./src/assets/images/*"
       ]
     }
   },

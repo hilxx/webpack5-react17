@@ -5,7 +5,7 @@ import type {
 } from 'webpack'
 import path from 'path'
 import HtmlWebpackPlugin from 'html-webpack-plugin'
-import net from 'net'
+import portfinder from 'portfinder'
 import MiniCssExtractPlugin from 'mini-css-extract-plugin'
 import CssMinimizerPlugin from 'css-minimizer-webpack-plugin'
 import TerserPlugin from 'terser-webpack-plugin'
@@ -52,6 +52,30 @@ const _getPlugins = (isProd: boolean) => {
   }
   return basePlugins
 }
+const _getBableOptions = (isProd) => {
+  const presets = ['@babel/preset-react', '@babel/preset-typescript']
+  const plugins: any[] = [
+    [
+      "module-resolver",
+      {
+        alias: {
+          '@': './src',
+          '@@': './config',
+          '@style': './src/assets/styles',
+          '@imgs': './src/assets/imgs',
+        },
+      },
+    ],
+  ]
+
+  if (!isProd) {
+    plugins.push('react-hot-loader/babel')
+  }
+  return {
+    presets,
+    plugins,
+  }
+}
 const __excludeReg = /\/node_modules\//
 
 const getDefaultConfig = (isProduction: boolean): WebpackConfig => {
@@ -67,7 +91,9 @@ const getDefaultConfig = (isProduction: boolean): WebpackConfig => {
       /* 资源模块(asset module)地址 */
       assetModuleFilename: 'assets/[hash][ext][query]',
     },
-    entry: './src/App.tsx' as any,
+    resolve: {
+      extensions: ['.js', '.jsx', '.ts', '.tsx',],
+    },
     module: {
       defaultRules: [
         cssRules,
@@ -90,20 +116,7 @@ const getDefaultConfig = (isProduction: boolean): WebpackConfig => {
           test: /\.[jt]sx?$/,
           loader: 'babel-loader',
           exclude: __excludeReg,
-          options: {
-            presets: ['@babel/preset-react', '@babel/preset-typescript'],
-            plugins: [
-              [
-                "module-resolver",
-                {
-                  alias: {
-                    '@': './src',
-                    '@@': './config',
-                  },
-                },
-              ]
-            ],
-          },
+          options: _getBableOptions(isProduction),
         },
       ],
     },
@@ -112,25 +125,12 @@ const getDefaultConfig = (isProduction: boolean): WebpackConfig => {
 }
 
 const getDevConfig = async (port_ = 1234): Promise<WebpackConfig> => {
-  const port = await new Promise(resolve => {
-    // 检测端口是否被占用
-    const portIsOccupied = (testPort) => {
-      // 创建服务并监听该端口
-      const server = net.createServer().listen(testPort)
-
-      server.on('listening', function () {
-        server.close() // 关闭服务
-        resolve(testPort)
-      })
-      server.on('error', function (err) {
-        portIsOccupied(testPort + 1)
-      })
-    }
-    portIsOccupied(port_)
-  })
+  const port = await portfinder.getPortPromise({ port: port_ })
 
   return {
+    entry: ['react-hot-loader/patch', './src/App.tsx'] as any,
     devtool: 'cheap-module-source-map',
+    stats: 'errors-only',
     devServer: {
       port,
       open: false,
@@ -139,18 +139,20 @@ const getDevConfig = async (port_ = 1234): Promise<WebpackConfig> => {
       progress: true,
       hot: true,
       historyApiFallback: true,
+      clientLogLevel: 'silent',
       proxy: {
         '/api': {
           target: 'http://localhost:7890',
           changeOrigin: true,
           pathRewrite: { '^/api': '/' }
         }
-      }
+      },
     },
   }
 }
 
 const prodConfig: WebpackConfig = {
+  entry: ['./src/App.tsx'] as any,
   optimization: {
     minimizer: [
       new CssMinimizerPlugin({
@@ -189,9 +191,10 @@ const prodConfig: WebpackConfig = {
   }
 }
 
-export default async ({ production = false, }) => {
+export default async () => {
+  const isProd = process.env.NODE_ENV === 'production'
   return ({
-    ...getDefaultConfig(production),
-    ...await (production ? prodConfig : getDevConfig()),
+    ...getDefaultConfig(isProd),
+    ... (isProd ? prodConfig : await getDevConfig()),
   })
 }

@@ -57,7 +57,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 exports.__esModule = true;
 var path_1 = __importDefault(require("path"));
 var html_webpack_plugin_1 = __importDefault(require("html-webpack-plugin"));
-var net_1 = __importDefault(require("net"));
+var portfinder_1 = __importDefault(require("portfinder"));
 var mini_css_extract_plugin_1 = __importDefault(require("mini-css-extract-plugin"));
 var css_minimizer_webpack_plugin_1 = __importDefault(require("css-minimizer-webpack-plugin"));
 var terser_webpack_plugin_1 = __importDefault(require("terser-webpack-plugin"));
@@ -98,6 +98,29 @@ var _getPlugins = function (isProd) {
     }
     return basePlugins;
 };
+var _getBableOptions = function (isProd) {
+    var presets = ['@babel/preset-react', '@babel/preset-typescript'];
+    var plugins = [
+        [
+            "module-resolver",
+            {
+                alias: {
+                    '@': './src',
+                    '@@': './config',
+                    '@style': './src/assets/styles',
+                    '@imgs': './src/assets/imgs'
+                }
+            },
+        ],
+    ];
+    if (!isProd) {
+        plugins.push('react-hot-loader/babel');
+    }
+    return {
+        presets: presets,
+        plugins: plugins
+    };
+};
 var __excludeReg = /\/node_modules\//;
 var getDefaultConfig = function (isProduction) {
     var cssRules = _getCssRules(isProduction);
@@ -111,7 +134,9 @@ var getDefaultConfig = function (isProduction) {
             /* 资源模块(asset module)地址 */
             assetModuleFilename: 'assets/[hash][ext][query]'
         },
-        entry: './src/App.tsx',
+        resolve: {
+            extensions: ['.js', '.jsx', '.ts', '.tsx',]
+        },
         module: {
             defaultRules: [
                 cssRules,
@@ -133,20 +158,7 @@ var getDefaultConfig = function (isProduction) {
                     test: /\.[jt]sx?$/,
                     loader: 'babel-loader',
                     exclude: __excludeReg,
-                    options: {
-                        presets: ['@babel/preset-react', '@babel/preset-typescript'],
-                        plugins: [
-                            [
-                                "module-resolver",
-                                {
-                                    alias: {
-                                        '@': './src',
-                                        '@@': './config'
-                                    }
-                                },
-                            ]
-                        ]
-                    }
+                    options: _getBableOptions(isProduction)
                 },
             ]
         },
@@ -159,25 +171,13 @@ var getDevConfig = function (port_) {
         var port;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, new Promise(function (resolve) {
-                        // 检测端口是否被占用
-                        var portIsOccupied = function (testPort) {
-                            // 创建服务并监听该端口
-                            var server = net_1["default"].createServer().listen(testPort);
-                            server.on('listening', function () {
-                                server.close(); // 关闭服务
-                                resolve(testPort);
-                            });
-                            server.on('error', function (err) {
-                                portIsOccupied(testPort + 1);
-                            });
-                        };
-                        portIsOccupied(port_);
-                    })];
+                case 0: return [4 /*yield*/, portfinder_1["default"].getPortPromise({ port: port_ })];
                 case 1:
                     port = _a.sent();
                     return [2 /*return*/, {
+                            entry: ['react-hot-loader/patch', './src/App.tsx'],
                             devtool: 'cheap-module-source-map',
+                            stats: 'errors-only',
                             devServer: {
                                 port: port,
                                 open: false,
@@ -186,6 +186,7 @@ var getDevConfig = function (port_) {
                                 progress: true,
                                 hot: true,
                                 historyApiFallback: true,
+                                clientLogLevel: 'silent',
                                 proxy: {
                                     '/api': {
                                         target: 'http://localhost:7890',
@@ -200,6 +201,7 @@ var getDevConfig = function (port_) {
     });
 };
 var prodConfig = {
+    entry: ['./src/App.tsx'],
     optimization: {
         minimizer: [
             new css_minimizer_webpack_plugin_1["default"]({
@@ -237,17 +239,21 @@ var prodConfig = {
         }
     }
 };
-exports["default"] = (function (_a) {
-    var _b = _a.production, production = _b === void 0 ? false : _b;
-    return __awaiter(void 0, void 0, void 0, function () {
-        var _c;
-        return __generator(this, function (_d) {
-            switch (_d.label) {
-                case 0:
-                    _c = [__assign({}, getDefaultConfig(production))];
-                    return [4 /*yield*/, (production ? prodConfig : getDevConfig())];
-                case 1: return [2 /*return*/, (__assign.apply(void 0, _c.concat([_d.sent()])))];
-            }
-        });
+exports["default"] = (function () { return __awaiter(void 0, void 0, void 0, function () {
+    var isProd, _a, _b;
+    return __generator(this, function (_c) {
+        switch (_c.label) {
+            case 0:
+                isProd = process.env.NODE_ENV === 'production';
+                _a = [__assign({}, getDefaultConfig(isProd))];
+                if (!isProd) return [3 /*break*/, 1];
+                _b = prodConfig;
+                return [3 /*break*/, 3];
+            case 1: return [4 /*yield*/, getDevConfig()];
+            case 2:
+                _b = _c.sent();
+                _c.label = 3;
+            case 3: return [2 /*return*/, (__assign.apply(void 0, _a.concat([(_b)])))];
+        }
     });
-});
+}); });

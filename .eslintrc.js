@@ -29,6 +29,7 @@ module.exports = {
     disallowTypeAnnotations: true,
    }
   ],
+  '@typescript-eslint/no-explicit-any': -1,
   'indent': [
    'error',
    1,
